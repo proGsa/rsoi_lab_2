@@ -17,10 +17,22 @@ jobs:
 
       - uses: docker/setup-buildx-action@v2
 
-      # TODO build and run unit tests
+      - name: Install dependencies
+        run: |
+          pip install -r library_service/requirements.txt 
+          pip install -r reservation_service/requirements.txt
+          pip install -r rating_service/requirements.txt
+          pip install -r gateway_service/requirements.txt
+
+      - name: Run unit tests
+        run: |
+          pytest library_service/tests
+          pytest reservation_service/tests
+          pytest rating_service/tests
 
       - name: Build images
         timeout-minutes: 10
+        working-directory: v4
         run: docker compose build
 
       - name: Run containers
@@ -35,8 +47,8 @@ jobs:
         uses: matt-ball/newman-action@master
         with:
           # TODO insert your variant
-          collection: <variant>/postman/collection.json
-          environment: <variant>/postman/environment.json
+          collection: <v4>/postman/collection.json
+          environment: <v4>/postman/environment.json
           delayRequest: 100
           reporters: '[ "cli" ]'
 
