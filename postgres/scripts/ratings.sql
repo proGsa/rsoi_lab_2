@@ -9,6 +9,8 @@ CREATE TABLE rating
 INSERT INTO rating (username, stars)
 VALUES ('test', 5);
 
+INSERT INTO rating (username, stars)
+VALUES ('Test Max', 75);
 GRANT USAGE ON SCHEMA public TO program;
 
 GRANT SELECT, INSERT, UPDATE, DELETE
