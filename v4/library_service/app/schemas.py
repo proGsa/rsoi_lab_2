@@ -2,7 +2,6 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-
 class LibraryResponse(BaseModel):
     model_config = ConfigDict(populate_by_name=True, from_attributes=True)
 
@@ -10,6 +9,12 @@ class LibraryResponse(BaseModel):
     name: str
     city: str
     address: str
+
+class LibrariesResponse(BaseModel):
+    page: int
+    pageSize: int = Field(alias="pageSize")
+    totalElements: int
+    items: list[LibraryResponse]
 
 class BookResponse(BaseModel):
     model_config = ConfigDict(populate_by_name=True, from_attributes=True)
@@ -22,4 +27,7 @@ class BookResponse(BaseModel):
     availableCount: int = Field(alias="availableCount")
 
 class BooksResponse(BaseModel):
+    page: int
+    pageSize: int = Field(alias="pageSize")
+    totalElements: int
     items: list[BookResponse]

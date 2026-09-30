@@ -54,11 +54,16 @@ def test_get_libraries(client, db):
 
     data = response.json()
 
-    assert len(data) == 1
-    assert data[0]["libraryUid"] == str(library.library_uid)
-    assert data[0]["name"] == "Библиотека имени 7 Непьющих"
-    assert data[0]["city"] == "Москва"
-    assert data[0]["address"] == "2-я Бауманская ул., д.5, стр.1"
+    assert data["page"] == 0
+    assert data["pageSize"] == 10
+    assert data["totalElements"] == 1
+    assert len(data["items"]) == 1
+
+    item = data["items"][0]
+    assert item["libraryUid"] == str(library.library_uid)
+    assert item["name"] == "Библиотека имени 7 Непьющих"
+    assert item["city"] == "Москва"
+    assert item["address"] == "2-я Бауманская ул., д.5, стр.1"
 
 
 def test_get_libraries_empty(client, db):
@@ -70,6 +75,7 @@ def test_get_libraries_empty(client, db):
 
     db.query.return_value = query
 
+    query.count.return_value = 0
     response = client.get(
         "/api/v1/libraries",
         params={
@@ -80,7 +86,12 @@ def test_get_libraries_empty(client, db):
     )
 
     assert response.status_code == 200
-    assert response.json() == []
+    assert response.json() == {
+        "page": 0,
+        "pageSize": 10,
+        "totalElements": 0,
+        "items": [],
+    }
 
 
 def test_get_books(client, db):
@@ -110,6 +121,7 @@ def test_get_books(client, db):
     books_query.offset.return_value = books_query
     books_query.limit.return_value = books_query
     books_query.all.return_value = [(book, 1)]
+    books_query.count.return_value = 1
 
     db.query.side_effect = [
         library_query,
@@ -172,6 +184,7 @@ def test_get_books_show_all_false(client, db):
     books_query = MagicMock()
     books_query.join.return_value = books_query
     books_query.filter.return_value = books_query
+    books_query.count.return_value = 0
     books_query.offset.return_value = books_query
     books_query.limit.return_value = books_query
     books_query.all.return_value = []
@@ -191,7 +204,12 @@ def test_get_books_show_all_false(client, db):
     )
 
     assert response.status_code == 200
-    assert response.json() == {"items": []}
+    assert response.json() == {
+        "page": 0,
+        "pageSize": 10,
+        "totalElements": 0,
+        "items": [],
+    }
     assert books_query.filter.called
 
 
@@ -239,5 +257,8 @@ def test_get_books_show_all_true(client, db):
     items = data["items"]
     
     assert len(items) == 1
+    assert data["page"] == 0
+    assert data["pageSize"] == 10
+    assert data["totalElements"] == 1
     assert items[0]["bookUid"] == str(book.book_uid)
     assert items[0]["availableCount"] == 0

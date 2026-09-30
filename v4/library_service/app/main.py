@@ -13,15 +13,20 @@ app = FastAPI(title="Library Service")
 def health():
     return {"status": "ok"}
 
-@app.get("/api/v1/libraries", response_model=list[schemas.LibraryResponse])
+@app.get("/api/v1/libraries", response_model=schemas.LibrariesResponse)
 def get_libraries(city: str, page: int = Query(0, ge=0), size: int = Query(10, ge=1), db: Session = Depends(get_db)):
-    libraries = (
-        db.query(models.Library)
-        .filter(models.Library.city == city)
-        .offset(page * size).limit(size).all()
-    )
+    query = (db.query(models.Library).filter(models.Library.city == city))
 
-    return libraries
+    total_elements = query.count()
+
+    libraries = (query.offset(page * size).limit(size).all())
+
+    return {
+        "page": page,
+        "pageSize": size,
+        "totalElements": total_elements,
+        "items": libraries,
+    }
 
 @app.get("/api/v1/libraries/{library_uid}/books", response_model=BooksResponse)
 def get_books(library_uid: UUID, page: int = Query(0, ge=0), size: int = Query(10, ge=1), showAll: bool = False, db: Session = Depends(get_db)):
@@ -39,9 +44,15 @@ def get_books(library_uid: UUID, page: int = Query(0, ge=0), size: int = Query(1
     if not showAll:
         query = query.filter(models.LibraryBook.available_count > 0)
 
+    total_elements = query.count()
+    
     results = (query.offset(page * size).limit(size).all())
 
+
     return {
+        "page": page,
+        "pageSize": size,
+        "totalElements": total_elements,
         "items": [
             schemas.BookResponse(
                 book_uid=book.book_uid,
@@ -52,7 +63,7 @@ def get_books(library_uid: UUID, page: int = Query(0, ge=0), size: int = Query(1
                 availableCount=available_count,
             )
             for book, available_count in results
-        ]
+        ],
     }
 
 # @app.get("/api/v1/libraries/{library_uid}", response_model=schemas.LibraryResponse)
