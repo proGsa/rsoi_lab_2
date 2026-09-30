@@ -46,21 +46,17 @@ jobs:
           ./scripts/wait-script.sh
         env:
           WAIT_PORTS: 8080,8070,8060,8050
+      
+      - name: Check rating service
+        run: |
+          docker compose ps
+          docker compose logs rating-service
+          docker compose exec -T postgres psql -U program -d ratings -c "SELECT username, stars FROM rating;"
 
-      # - name: Check containers status
-      #   if: always()
-      #   working-directory: v4
-      #   run: |
-      #     docker compose ps
-      #     echo "-----"
-      #     docker compose ps --format json
-
-      # - name: Dump logs on failure
-      #   if: always()
-      #   working-directory: v4
-      #   run: |
-      #     docker compose logs --no-color
-
+      - name: Check rating through gateway
+        run: |
+          curl -i http://localhost:8080/api/v1/rating \
+            -H "X-User-Name: user1"
       - name: Run API Tests
         uses: matt-ball/newman-action@master
         with:
@@ -68,7 +64,7 @@ jobs:
           environment: v4/postman/environment.json
           delayRequest: 100
           reporters: '[ "cli" ]'
-
+      
       - name: Show service logs
         if: always()
         run: docker compose logs --no-color
