@@ -23,7 +23,8 @@ jobs:
           pip install -r v4/reservation_service/requirements.txt
           pip install -r v4/rating_service/requirements.txt
           pip install -r v4/gateway_service/requirements.txt
-
+      - name: find dir
+        run: find v4 -maxdepth 2 -type f | sort
       - name: Run unit tests
         run: |
           pytest v4/library_service/tests
