@@ -16,6 +16,7 @@ jobs:
           fetch-depth: 0
 
       - uses: docker/setup-buildx-action@v2
+
       - name: Install dependencies
         env:
           PYTHONPATH: ${{ github.workspace }}
@@ -24,15 +25,6 @@ jobs:
           pip install -r v4/reservation_service/requirements.txt
           pip install -r v4/rating_service/requirements.txt
           pip install -r v4/gateway_service/requirements.txt
-      
-      - name: Check PostgreSQL driver
-        run: |
-          python -c "import sqlalchemy; print('SQLAlchemy:', sqlalchemy.__version__)"
-          python -c "import psycopg2; print('psycopg2:', psycopg2.__version__)"
-          python -c "import psycopg; print('psycopg:', psycopg.__version__)" || true
-      - name: Check DATABASE_URL
-        run: |
-          python -c "import os; u=os.getenv('DATABASE_URL', '<not set>'); print(u.split('://')[0])"
       
       - name: Run unit tests
         env:
@@ -54,7 +46,19 @@ jobs:
           ./scripts/wait-script.sh
         env:
           WAIT_PORTS: 8080,8070,8060,8050
+      - name: Check containers status
+        if: always()
+        working-directory: v4
+        run: |
+          docker compose ps
+          echo "-----"
+          docker compose ps --format json
 
+      - name: Dump logs on failure
+        if: always()
+        working-directory: v4
+        run: |
+          docker compose logs --no-color
       - name: Run API Tests
         uses: matt-ball/newman-action@master
         with:
