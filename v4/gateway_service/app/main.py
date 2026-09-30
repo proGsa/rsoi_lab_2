@@ -344,13 +344,8 @@ def return_reservation(reservation_uid: UUID, body: ReturnRequest, x_user_name: 
 
 @app.get("/api/v1/rating")
 def get_rating(x_user_name: str = Header(..., alias="X-User-Name"),):
-    response = requests.get(
-        "http://rating-service:8050/api/v1/rating",
-        headers={"X-User-Name": x_user_name}
-    )
-
-    return Response(
-        content=response.content,
-        status_code=response.status_code,
-        media_type=response.headers.get("content-type")
+    return proxy_request(
+        "GET",
+        f"{RATING_SERVICE_URL}/api/v1/rating",
+        headers={"X-User-Name": x_user_name},
     )

@@ -7,7 +7,7 @@ CREATE TABLE rating
 );
 
 INSERT INTO rating (username, stars)
-VALUES ('nastya', 5);
+VALUES ('test', 5);
 
 GRANT USAGE ON SCHEMA public TO program;
 
