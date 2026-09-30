@@ -47,12 +47,11 @@ jobs:
         env:
           WAIT_PORTS: 8080,8070,8060,8050
       
-      - name: Check rating service
+      - name: Check rating database
         run: |
-          docker compose ps
-          docker compose logs rating-service
-          docker compose exec -T postgres psql -U program -d ratings -c "SELECT username, stars FROM rating;"
-
+          docker compose exec -T postgres \
+            psql -U program -d ratings \
+            -c "SELECT username, stars FROM rating;"
       - name: Check rating through gateway
         run: |
           curl -i http://localhost:8080/api/v1/rating \
