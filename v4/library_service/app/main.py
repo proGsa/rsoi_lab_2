@@ -14,12 +14,12 @@ def health():
     return {"status": "ok"}
 
 @app.get("/api/v1/libraries", response_model=schemas.LibrariesResponse)
-def get_libraries(city: str, page: int = Query(0, ge=0), size: int = Query(10, ge=1), db: Session = Depends(get_db)):
+def get_libraries(city: str, page: int = Query(1, ge=1), size: int = Query(10, ge=1), db: Session = Depends(get_db)):
     query = (db.query(models.Library).filter(models.Library.city == city))
 
     total_elements = query.count()
 
-    libraries = (query.offset(page * size).limit(size).all())
+    libraries = (query.offset((page-1) * size).limit(size).all())
 
     return {
         "page": page,
@@ -29,7 +29,7 @@ def get_libraries(city: str, page: int = Query(0, ge=0), size: int = Query(10, g
     }
 
 @app.get("/api/v1/libraries/{library_uid}/books", response_model=BooksResponse)
-def get_books(library_uid: UUID, page: int = Query(0, ge=0), size: int = Query(10, ge=1), showAll: bool = False, db: Session = Depends(get_db)):
+def get_books(library_uid: UUID, page: int = Query(1, ge=1), size: int = Query(10, ge=1), showAll: bool = False, db: Session = Depends(get_db)):
     library = (db.query(models.Library).filter(models.Library.library_uid == library_uid).first())
 
     if library is None:
@@ -46,7 +46,7 @@ def get_books(library_uid: UUID, page: int = Query(0, ge=0), size: int = Query(1
 
     total_elements = query.count()
     
-    results = (query.offset(page * size).limit(size).all())
+    results = (query.offset((page-1) * size).limit(size).all())
 
 
     return {

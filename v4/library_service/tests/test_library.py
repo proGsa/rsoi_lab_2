@@ -45,7 +45,7 @@ def test_get_libraries(client, db):
         "/api/v1/libraries",
         params={
             "city": "Москва",
-            "page": 0,
+            "page": 1,
             "size": 10,
         },
     )
@@ -54,7 +54,7 @@ def test_get_libraries(client, db):
 
     data = response.json()
 
-    assert data["page"] == 0
+    assert data["page"] == 1
     assert data["pageSize"] == 10
     assert data["totalElements"] == 1
     assert len(data["items"]) == 1
@@ -80,14 +80,14 @@ def test_get_libraries_empty(client, db):
         "/api/v1/libraries",
         params={
             "city": "Санкт-Петербург",
-            "page": 0,
+            "page": 1,
             "size": 10,
         },
     )
 
     assert response.status_code == 200
     assert response.json() == {
-        "page": 0,
+        "page": 1,
         "pageSize": 10,
         "totalElements": 0,
         "items": [],
@@ -131,7 +131,7 @@ def test_get_books(client, db):
     response = client.get(
         f"/api/v1/libraries/{library.library_uid}/books",
         params={
-            "page": 0,
+            "page": 1,
             "size": 10,
         },
     )
@@ -161,7 +161,7 @@ def test_get_books_library_not_found(client, db):
     response = client.get(
         f"/api/v1/libraries/{library_uid}/books",
         params={
-            "page": 0,
+            "page": 1,
             "size": 10,
         },
     )
@@ -197,7 +197,7 @@ def test_get_books_show_all_false(client, db):
     response = client.get(
         f"/api/v1/libraries/{library.library_uid}/books",
         params={
-            "page": 0,
+            "page": 1,
             "size": 10,
             "showAll": False,
         },
@@ -205,7 +205,7 @@ def test_get_books_show_all_false(client, db):
 
     assert response.status_code == 200
     assert response.json() == {
-        "page": 0,
+        "page": 1,
         "pageSize": 10,
         "totalElements": 0,
         "items": [],
@@ -248,7 +248,7 @@ def test_get_books_show_all_true(client, db):
 
     response = client.get(
         f"/api/v1/libraries/{library.library_uid}/books",
-        params={"page": 0, "size": 10, "showAll": True},
+        params={"page": 1, "size": 10, "showAll": True},
     )
 
     assert response.status_code == 200
@@ -257,7 +257,7 @@ def test_get_books_show_all_true(client, db):
     items = data["items"]
     
     assert len(items) == 1
-    assert data["page"] == 0
+    assert data["page"] == 1
     assert data["pageSize"] == 10
     assert data["totalElements"] == 1
     assert items[0]["bookUid"] == str(book.book_uid)
