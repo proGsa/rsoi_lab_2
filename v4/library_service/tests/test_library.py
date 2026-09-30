@@ -4,9 +4,9 @@ from unittest.mock import MagicMock
 import pytest
 from fastapi.testclient import TestClient
 
-from app.db import get_db
-from app.main import app
-from app.models import Book, Library
+from v4.library_service.app.db import get_db
+from v4.library_service.app.main import app
+from v4.library_service.app.models import Book, Library
 
 
 @pytest.fixture
@@ -55,7 +55,7 @@ def test_get_libraries(client, db):
     data = response.json()
 
     assert len(data) == 1
-    assert data[0]["library_uid"] == str(library.library_uid)
+    assert data[0]["libraryUid"] == str(library.library_uid)
     assert data[0]["name"] == "Библиотека имени 7 Непьющих"
     assert data[0]["city"] == "Москва"
     assert data[0]["address"] == "2-я Бауманская ул., д.5, стр.1"
@@ -127,14 +127,15 @@ def test_get_books(client, db):
     assert response.status_code == 200
 
     data = response.json()
+    items = data["items"]
 
-    assert len(data) == 1
-    assert data[0]["book_uid"] == str(book.book_uid)
-    assert data[0]["name"] == "Краткий курс C++ в 7 томах"
-    assert data[0]["author"] == "Бьерн Страуструп"
-    assert data[0]["genre"] == "Научная фантастика"
-    assert data[0]["condition"] == "EXCELLENT"
-    assert data[0]["availableCount"] == 1
+    assert len(items) == 1
+    assert items[0]["bookUid"] == str(book.book_uid)
+    assert items[0]["name"] == "Краткий курс C++ в 7 томах"
+    assert items[0]["author"] == "Бьерн Страуструп"
+    assert items[0]["genre"] == "Научная фантастика"
+    assert items[0]["condition"] == "EXCELLENT"
+    assert items[0]["availableCount"] == 1
 
 
 def test_get_books_library_not_found(client, db):
@@ -190,7 +191,7 @@ def test_get_books_show_all_false(client, db):
     )
 
     assert response.status_code == 200
-    assert response.json() == []
+    assert response.json() == {"items": []}
     assert books_query.filter.called
 
 
@@ -235,7 +236,8 @@ def test_get_books_show_all_true(client, db):
     assert response.status_code == 200
 
     data = response.json()
-
-    assert len(data) == 1
-    assert data[0]["book_uid"] == str(book.book_uid)
-    assert data[0]["availableCount"] == 0
+    items = data["items"]
+    
+    assert len(items) == 1
+    assert items[0]["bookUid"] == str(book.book_uid)
+    assert items[0]["availableCount"] == 0

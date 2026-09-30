@@ -14,10 +14,7 @@ app = FastAPI(title="Rating Service")
 def health():
     return {"status": "ok"}
 
-@app.get(
-    "/api/v1/rating",
-    response_model=schemas.UserRatingResponse,
-)
+@app.get("/api/v1/rating", response_model=schemas.UserRatingResponse)
 def get_rating(x_user_name: str = Header(...), db: Session = Depends(get_db)):
     rating = (
         db.query(models.Rating)
