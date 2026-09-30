@@ -32,9 +32,6 @@ def get_reservations(x_user_name: str = Header(...), db: Session = Depends(get_d
 
 @app.post("/api/v1/reservations", response_model=schemas.ReservationResponse)
 def create_reservation(request: schemas.ReservationRequest, x_user_name: str = Header(...), db: Session = Depends(get_db)):
-    if request.till_date <= datetime.now(request.till_date.tzinfo):
-        raise HTTPException(status_code=400, detail="Till date must be in the future")
-
     reservation = models.Reservation(
         reservation_uid=uuid4(),
         username=x_user_name,
