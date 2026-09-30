@@ -3,7 +3,7 @@ from uuid import UUID
 import httpx
 from fastapi import FastAPI, Request, Response, Query, Header, HTTPException
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import date, datetime
 
 app = FastAPI(title="Gateway Service")
 
@@ -14,11 +14,11 @@ RATING_SERVICE_URL = os.getenv("RATING_SERVICE_URL", "http://rating-service:8050
 class ReservationRequest(BaseModel):
     bookUid: UUID
     libraryUid: UUID
-    tillDate: datetime
+    tillDate: date
 
 class ReturnRequest(BaseModel):
     condition: str
-    date: datetime
+    date: date
 
 @app.get("/manage/health")
 def health():
@@ -156,7 +156,7 @@ def create_reservation(body: ReservationRequest, x_user_name: str = Header(..., 
         books_response = httpx.get(
             f"{LIBRARY_SERVICE_URL}/api/v1/libraries/{body.libraryUid}/books",
             params={
-                "page": 0,
+                "page": 1,
                 "size": 100,
                 "showAll": False,
             },
@@ -190,6 +190,7 @@ def create_reservation(body: ReservationRequest, x_user_name: str = Header(..., 
         raise HTTPException(status_code=take_response.status_code, detail="Unable to take book")
 
     reservation_data = body.model_dump(mode="json")
+    reservation_data["tillDate"] = f"{reservation_data['tillDate']}T00:00:00"
 
     try:
         reservation_response = httpx.post(
@@ -248,7 +249,7 @@ def return_reservation(reservation_uid: UUID, body: ReturnRequest, x_user_name: 
         books_response = httpx.get(
             f"{LIBRARY_SERVICE_URL}/api/v1/libraries/{library_uid}/books",
             params={
-                "page": 0,
+                "page": 1,
                 "size": 100,
                 "showAll": True,
             },
