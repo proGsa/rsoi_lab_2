@@ -60,7 +60,7 @@ jobs:
       #   working-directory: v4
       #   run: |
       #     docker compose logs --no-color
-      
+
       - name: Run API Tests
         uses: matt-ball/newman-action@master
         with:
@@ -69,6 +69,10 @@ jobs:
           environment: v4/postman/environment.json
           delayRequest: 100
           reporters: '[ "cli" ]'
+          
+      - name: Show service logs
+        if: always()
+        run: docker compose logs --no-color
 
       - uses: education/autograding@v1
         id: autograder
