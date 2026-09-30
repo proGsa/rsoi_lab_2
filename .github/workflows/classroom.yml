@@ -34,14 +34,11 @@ jobs:
         run: |
           python -c "import os; u=os.getenv('DATABASE_URL', '<not set>'); print(u.split('://')[0])"
       
-      # - name: find dir
-      #   run: find v4 -maxdepth 2 -type f | sort
-
-      # - name: Run unit tests
-      #   env:
-      #     PYTHONPATH: ${{ github.workspace }}
-      #   run: |
-      #     pytest v4/library_service/tests
+      - name: Run unit tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          pytest v4/library_service/tests
       #     pytest v4/reservation_service/tests
       #     pytest v4/rating_service/tests
 
