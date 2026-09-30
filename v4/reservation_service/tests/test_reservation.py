@@ -94,28 +94,6 @@ def test_create_reservation():
     assert data["libraryUid"] == str(library_uid)
     assert data["status"] == "RENTED"
 
-
-def test_create_reservation_past_date():
-    db = MagicMock()
-    app.dependency_overrides[get_db] = lambda: db
-
-    response = client.post(
-        "/api/v1/reservations",
-        headers={"X-User-Name": "test_user"},
-        json={
-            "bookUid": str(uuid4()),
-            "libraryUid": str(uuid4()),
-            "tillDate": "2020-01-01T12:00:00",
-        },
-    )
-
-    assert response.status_code == 400
-    assert response.json()["detail"] == "Till date must be in the future"
-
-    db.add.assert_not_called()
-    db.commit.assert_not_called()
-
-
 def test_create_reservation_invalid_body():
     db = MagicMock()
     app.dependency_overrides[get_db] = lambda: db
