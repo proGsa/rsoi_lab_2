@@ -68,20 +68,7 @@ jobs:
           environment: v4/postman/environment.json
           delayRequest: 100
           reporters: '[ "cli" ]'
-      - name: Check postgres container
-        if: always()
-        run: |
-          docker compose ps
-          docker compose exec -T postgres sh -c '
-            echo "=== /docker-entrypoint-initdb.d ==="
-            ls -la /docker-entrypoint-initdb.d
 
-            echo "=== scripts ==="
-            ls -la /docker-entrypoint-initdb.d/scripts || true
-
-            echo "=== all files ==="
-            find /docker-entrypoint-initdb.d -type f | sort
-          '
       - name: Show service logs
         if: always()
         run: docker compose logs --no-color
