@@ -304,7 +304,12 @@ def create_reservation(body: ReservationRequest, x_user_name: str = Header(..., 
 
     reservation_data = reservation_response.json()
     library = get_library_info(str(reservation_data.get("libraryUid") or body.libraryUid))
-    book = book_info(book)
+    book = {
+            "bookUid": book["bookUid"],
+            "name": book["name"],
+            "author": book["author"],
+            "genre": book["genre"],
+        }
 
     return JSONResponse(content={
         "reservationUid": str(reservation_data.get("reservationUid")),
@@ -317,7 +322,7 @@ def create_reservation(body: ReservationRequest, x_user_name: str = Header(..., 
             "name": library["name"],
             "address": library["address"],
             "city": library["city"],
-        },,
+        },
         "rating": {"stars": stars},
     }, status_code=200)
 
