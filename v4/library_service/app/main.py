@@ -66,14 +66,14 @@ def get_books(library_uid: UUID, page: int = Query(1, ge=1), size: int = Query(1
         ],
     }
 
-# @app.get("/api/v1/libraries/{library_uid}", response_model=schemas.LibraryResponse)
-# def get_library(library_uid: UUID, db: Session = Depends(get_db)):
-#     library = (db.query(models.Library).filter(models.Library.library_uid == library_uid).first())
+@app.get("/api/v1/libraries/{library_uid}", response_model=schemas.LibraryResponse)
+def get_library(library_uid: UUID, db: Session = Depends(get_db)):
+    library = db.query(models.Library).filter(models.Library.library_uid == library_uid).first()
 
-#     if library is None:
-#         raise HTTPException(status_code=404, detail="Library not found")   
+    if library is None:
+        raise HTTPException(status_code=404, detail="Library not found")
 
-#     return library
+    return library
 
 @app.post("/api/v1/libraries/{library_uid}/books/{book_uid}/take")
 def take_book(library_uid: UUID, book_uid: UUID, db: Session = Depends(get_db)):

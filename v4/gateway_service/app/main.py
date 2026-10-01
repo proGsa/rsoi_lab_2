@@ -2,6 +2,7 @@ import os
 from uuid import UUID
 import httpx
 from fastapi import FastAPI, Request, Response, Query, Header, HTTPException
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from datetime import date, datetime
 
@@ -19,6 +20,13 @@ class ReservationRequest(BaseModel):
 class ReturnRequest(BaseModel):
     condition: str
     date: date
+
+
+def to_date(value: str | date) -> date:
+    # В контракте все даты - LocalDate (YYYY-MM-DD), приводим к date для корректных сравнений
+    if isinstance(value, date):
+        return value
+    return date.fromisoformat(str(value)[:10])
 
 @app.get("/manage/health")
 def health():
@@ -68,6 +76,70 @@ def proxy_get(url: str, params: dict | None = None, headers: dict | None = None)
 
 # ---------------- LIBRARY SERVICE ----------------
 
+def get_library_info(library_uid) -> dict:
+    try:
+        response = httpx.get(
+            f"{LIBRARY_SERVICE_URL}/api/v1/libraries/{library_uid}",
+            timeout=5.0,
+        )
+    except httpx.RequestError:
+        raise HTTPException(status_code=503, detail="Library Service is unavailable")
+
+    if response.status_code != 200:
+        raise HTTPException(status_code=response.status_code, detail="Unable to get library")
+
+    return response.json()
+
+
+def get_book_info(library_uid, book_uid) -> dict:
+    try:
+        response = httpx.get(
+            f"{LIBRARY_SERVICE_URL}/api/v1/libraries/{library_uid}/books",
+            params={
+                "page": 1,
+                "size": 100,
+                "showAll": True,
+            },
+            timeout=5.0,
+        )
+    except httpx.RequestError:
+        raise HTTPException(status_code=503, detail="Library Service is unavailable")
+
+    if response.status_code != 200:
+        raise HTTPException(status_code=response.status_code, detail="Unable to get library books")
+
+    book = next(
+        (item for item in response.json()["items"] if item["bookUid"] == str(book_uid)),
+        None,
+    )
+
+    if book is None:
+        raise HTTPException(status_code=404, detail="Book not found")
+
+    return book
+
+
+def enrich_reservation(reservation: dict, book: dict, library: dict) -> dict:
+    return {
+        "reservationUid": str(reservation["reservationUid"]),
+        "status": reservation["status"],
+        "startDate": to_date(reservation["startDate"]).isoformat(),
+        "tillDate": to_date(reservation["tillDate"]).isoformat(),
+        "book": {
+            "bookUid": book["bookUid"],
+            "name": book["name"],
+            "author": book["author"],
+            "genre": book["genre"],
+        },
+        "library": {
+            "libraryUid": library["libraryUid"],
+            "name": library["name"],
+            "address": library["address"],
+            "city": library["city"],
+        },
+    }
+
+
 @app.get("/api/v1/libraries")
 def get_libraries(city: str, page: int = Query(0, ge=0), size: int = Query(10, ge=1)):
     return proxy_get(
@@ -103,12 +175,40 @@ def get_books(library_uid: UUID, page: int = Query(0, ge=0), size: int = Query(1
 
 @app.get("/api/v1/reservations")
 def get_reservations(x_user_name: str = Header(..., alias="X-User-Name")):
-    return proxy_get(
-        f"{RESERVATION_SERVICE_URL}/api/v1/reservations",
-        headers={
-            "X-User-Name": x_user_name,
-        },
-    )
+    try:
+        response = httpx.get(
+            f"{RESERVATION_SERVICE_URL}/api/v1/reservations",
+            headers={"X-User-Name": x_user_name},
+            timeout=5.0,
+        )
+    except httpx.RequestError:
+        raise HTTPException(status_code=503, detail="Reservation Service is unavailable")
+
+    if response.status_code != 200:
+        raise HTTPException(status_code=response.status_code, detail="Unable to get user reservations")
+
+    libraries: dict[str, dict] = {}
+    books: dict[tuple[str, str], dict] = {}
+    reservations = []
+
+    for reservation in response.json():
+        library_uid = str(reservation["libraryUid"])
+        book_uid = str(reservation["bookUid"])
+
+        if library_uid not in libraries:
+            libraries[library_uid] = get_library_info(library_uid)
+        if (library_uid, book_uid) not in books:
+            books[(library_uid, book_uid)] = get_book_info(library_uid, book_uid)
+
+        reservations.append(
+            enrich_reservation(
+                reservation,
+                books[(library_uid, book_uid)],
+                libraries[library_uid],
+            )
+        )
+
+    return JSONResponse(content=reservations, status_code=200)
 
 @app.post("/api/v1/reservations")
 def create_reservation(body: ReservationRequest, x_user_name: str = Header(..., alias="X-User-Name")):
@@ -189,14 +289,11 @@ def create_reservation(body: ReservationRequest, x_user_name: str = Header(..., 
     if take_response.status_code != 200:
         raise HTTPException(status_code=take_response.status_code, detail="Unable to take book")
 
-    reservation_data = body.model_dump(mode="json")
-    reservation_data["tillDate"] = f"{reservation_data['tillDate']}T00:00:00"
-
     try:
         reservation_response = httpx.post(
             f"{RESERVATION_SERVICE_URL}/api/v1/reservations",
             headers=headers,
-            json=reservation_data,
+            json=body.model_dump(mode="json"),
             timeout=5.0,
         )
     except httpx.RequestError:
@@ -205,11 +302,24 @@ def create_reservation(body: ReservationRequest, x_user_name: str = Header(..., 
     if reservation_response.status_code != 200:
         raise HTTPException(status_code=reservation_response.status_code, detail=reservation_response.text)
 
-    return Response(
-        content=reservation_response.content,
-        status_code=reservation_response.status_code,
-        media_type="application/json",
-    )
+    reservation_data = reservation_response.json()
+    library = get_library_info(str(reservation_data.get("libraryUid") or body.libraryUid))
+    book = book_info(book)
+
+    return JSONResponse(content={
+        "reservationUid": str(reservation_data.get("reservationUid")),
+        "status": reservation_data.get("status"),
+        "startDate": to_date(reservation_data.get("startDate")).isoformat(),
+        "tillDate": to_date(reservation_data.get("tillDate")).isoformat(),
+        "book": book,
+        "library": {
+            "libraryUid": library["libraryUid"],
+            "name": library["name"],
+            "address": library["address"],
+            "city": library["city"],
+        },,
+        "rating": {"stars": stars},
+    }, status_code=200)
 
 @app.post("/api/v1/reservations/{reservation_uid}/return")
 def return_reservation(reservation_uid: UUID, body: ReturnRequest, x_user_name: str = Header(..., alias="X-User-Name")):
@@ -233,16 +343,9 @@ def return_reservation(reservation_uid: UUID, body: ReturnRequest, x_user_name: 
 
     book_uid = reservation["bookUid"]
     library_uid = reservation["libraryUid"]
-    till_date = datetime.fromisoformat(reservation["tillDate"].replace("Z", "+00:00"))
 
-    return_date = body.date
-
-    if return_date.tzinfo is not None:
-        return_date = return_date.replace(tzinfo=None)
-
-    if till_date.tzinfo is not None:
-        till_date = till_date.replace(tzinfo=None)
-
+    till_date = to_date(reservation["tillDate"])
+    return_date = to_date(body.date)
     is_late = return_date > till_date
 
     try:
@@ -339,7 +442,12 @@ def return_reservation(reservation_uid: UUID, body: ReturnRequest, x_user_name: 
     if update_rating_response.status_code not in (200, 204):
         raise HTTPException(status_code=update_rating_response.status_code, detail=update_rating_response.text)
 
-    return Response(status_code=204)
+    reservation = status_response.json() if status_response.content else {}
+    reservation["userId"] = user_id
+    reservation["book"] = book
+    reservation["library"] = library
+
+    return ReturnResponse(**reservation)
 
 # ---------------- RATING SERVICE ----------------
 

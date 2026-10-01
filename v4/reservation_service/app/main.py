@@ -12,8 +12,6 @@ app = FastAPI(title="Reservation Service")
 
 
 def to_date(value: date | datetime) -> date:
-    # Колонки start_date/till_date имеют тип DateTime, поэтому из БД приходит
-    # datetime, а из схемы (LocalDate в контракте) - date. Сравнивать их нельзя.
     return value.date() if isinstance(value, datetime) else value
 
 @app.get("/manage/health")
