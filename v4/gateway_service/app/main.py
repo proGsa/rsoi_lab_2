@@ -1,10 +1,10 @@
 import os
 from uuid import UUID
 import httpx
-from fastapi import FastAPI, Request, Response, Query, Header, HTTPException
+from fastapi import FastAPI, Response, Query, Header, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from datetime import date, datetime
+from datetime import date
 
 app = FastAPI(title="Gateway Service")
 
@@ -447,12 +447,7 @@ def return_reservation(reservation_uid: UUID, body: ReturnRequest, x_user_name: 
     if update_rating_response.status_code not in (200, 204):
         raise HTTPException(status_code=update_rating_response.status_code, detail=update_rating_response.text)
 
-    reservation = status_response.json() if status_response.content else {}
-    reservation["userId"] = user_id
-    reservation["book"] = book
-    reservation["library"] = library
-
-    return ReturnResponse(**reservation)
+    return Response(status_code=204)
 
 # ---------------- RATING SERVICE ----------------
 
