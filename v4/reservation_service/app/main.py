@@ -4,11 +4,17 @@ from sqlalchemy.orm import Session
 from .db import get_db
 from . import models, schemas
 from uuid import uuid4
-from datetime import datetime
+from datetime import date, datetime
 from uuid import UUID
 
 
 app = FastAPI(title="Reservation Service")
+
+
+def to_date(value: date | datetime) -> date:
+    # Колонки start_date/till_date имеют тип DateTime, поэтому из БД приходит
+    # datetime, а из схемы (LocalDate в контракте) - date. Сравнивать их нельзя.
+    return value.date() if isinstance(value, datetime) else value
 
 @app.get("/manage/health")
 def health():
@@ -24,7 +30,7 @@ def get_reservations(x_user_name: str = Header(...), db: Session = Depends(get_d
             "startDate": reservation.start_date,
             "tillDate": reservation.till_date,
             "bookUid": reservation.book_uid,
-            "libraryUid": reservation.library_uid,
+            "libraryUid": reservation.library_uid, 
             "status": reservation.status,
         }
         for reservation in reservations
@@ -38,7 +44,7 @@ def create_reservation(request: schemas.ReservationRequest, x_user_name: str = H
         book_uid=request.book_uid,
         library_uid=request.library_uid,
         status="RENTED",
-        start_date=datetime.now(),
+        start_date=date.today(),
         till_date=request.till_date,
     )
 
@@ -72,15 +78,8 @@ def return_reservation(reservation_uid: str, request: schemas.ReturnRequest, x_u
     if reservation.status != "RENTED":
         raise HTTPException(status_code=400, detail="Reservation is not active")
 
-    return_date = request.date
-
-    if return_date.tzinfo is not None:
-        return_date = return_date.replace(tzinfo=None)
-
-    till_date = reservation.till_date
-
-    if till_date.tzinfo is not None:
-        till_date = till_date.replace(tzinfo=None)
+    return_date = to_date(request.date)
+    till_date = to_date(reservation.till_date)
 
     if return_date > till_date:
         reservation.status = "EXPIRED"

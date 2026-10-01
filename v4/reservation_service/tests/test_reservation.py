@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date
 from unittest.mock import MagicMock
 from uuid import uuid4
 
@@ -14,7 +14,7 @@ client = TestClient(app)
 def make_reservation(
     username: str = "test_user",
     status: str = "RENTED",
-    till_date: datetime | None = None,
+    till_date: date | None = None,
     book_uid=None,
     library_uid=None,
     reservation_uid=None,
@@ -25,8 +25,8 @@ def make_reservation(
     reservation.book_uid = book_uid or uuid4()
     reservation.library_uid = library_uid or uuid4()
     reservation.status = status
-    reservation.start_date = datetime(2026, 9, 21, 12, 0, 0)
-    reservation.till_date = till_date or datetime(2026, 9, 28, 12, 0, 0)
+    reservation.start_date = date(2026, 9, 21)
+    reservation.till_date = till_date or date(2026, 9, 28)
     return reservation
 
 def test_get_reservations():
@@ -79,7 +79,7 @@ def test_create_reservation():
         json={
             "bookUid": str(book_uid),
             "libraryUid": str(library_uid),
-            "tillDate": "2030-09-28T12:00:00",
+            "tillDate": "2030-09-28",
         },
     )
 
@@ -140,7 +140,7 @@ def test_get_reservation_not_found():
 
 def test_return_reservation_on_time():
     reservation = make_reservation(
-        till_date=datetime(2026, 9, 28, 12, 0, 0),
+        till_date=date(2026, 9, 28),
     )
 
     db = MagicMock()
@@ -153,7 +153,7 @@ def test_return_reservation_on_time():
         headers={"X-User-Name": "test_user"},
         json={
             "condition": "EXCELLENT",
-            "date": "2026-09-28T10:00:00",
+            "date": "2026-09-28",
         },
     )
 
@@ -163,7 +163,7 @@ def test_return_reservation_on_time():
 
 
 def test_return_reservation_expired():
-    reservation = make_reservation(till_date=datetime(2026, 9, 28, 12, 0, 0))
+    reservation = make_reservation(till_date=date(2026, 9, 28))
 
     db = MagicMock()
     db.query.return_value.filter.return_value.first.return_value = reservation
@@ -175,7 +175,7 @@ def test_return_reservation_expired():
         headers={"X-User-Name": "test_user"},
         json={
             "condition": "EXCELLENT",
-            "date": "2026-09-28T15:00:00",
+            "date": "2026-09-29",
         },
     )
 
@@ -195,7 +195,7 @@ def test_return_reservation_not_found():
         headers={"X-User-Name": "test_user"},
         json={
             "condition": "EXCELLENT",
-            "date": "2026-09-28T10:00:00",
+            "date": "2026-09-28",
         },
     )
 
@@ -206,7 +206,7 @@ def test_return_reservation_not_found():
 def test_return_reservation_already_returned():
     reservation = make_reservation(
         status="RETURNED",
-        till_date=datetime(2026, 9, 28, 12, 0, 0),
+        till_date=date(2026, 9, 28),
     )
 
     db = MagicMock()
@@ -219,7 +219,7 @@ def test_return_reservation_already_returned():
         headers={"X-User-Name": "test_user"},
         json={
             "condition": "EXCELLENT",
-            "date": "2026-09-28T10:00:00",
+            "date": "2026-09-28",
         },
     )
 
