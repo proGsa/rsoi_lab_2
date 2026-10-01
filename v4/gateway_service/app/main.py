@@ -23,7 +23,6 @@ class ReturnRequest(BaseModel):
 
 
 def to_date(value: str | date) -> date:
-    # В контракте все даты - LocalDate (YYYY-MM-DD), приводим к date для корректных сравнений
     if isinstance(value, date):
         return value
     return date.fromisoformat(str(value)[:10])
